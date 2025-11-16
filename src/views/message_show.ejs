@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Thread — <%= message.wa_id %></title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--accent:#0f4c81;--muted:#556277;--radius:10px}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Arial;padding:20px;background:var(--bg);color:#0f172a}
+    .wrap{max-width:980px;margin:0 auto}
+    .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .back{display:inline-flex;gap:8px;align-items:center;text-decoration:none;background:#fff;border:1px solid #e6eef8;padding:8px 10px;border-radius:8px;color:var(--accent)}
+    h2{margin:0;font-size:18px}
+
+    .thread{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+    .bubble{max-width:75%;padding:10px 14px;border-radius:12px;line-height:1.35}
+    .inbound{align-self:flex-start;background:#f3f4f6;border:1px solid #e6e9ee}
+    .outbound{align-self:flex-end;background:#eaf6ff;border:1px solid #d7eefc}
+    .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+
+    .attachments{margin-top:8px;display:flex;flex-wrap:wrap;gap:10px}
+    .attachments img{max-width:260px;border-radius:8px;border:1px solid #e6eef8}
+    .attachments a{color:var(--accent);font-weight:600}
+
+    .card{background:var(--card);padding:14px;border-radius:var(--radius);box-shadow:0 8px 24px rgba(15,20,30,0.04)}
+    .reply{display:flex;gap:12px;flex-wrap:wrap}
+    .reply form{flex:1;min-width:260px}
+    textarea{width:100%;min-height:110px;padding:10px;border-radius:8px;border:1px solid #e6eef8;font-size:14px}
+    .preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .preview img{max-width:120px;border-radius:6px;border:1px solid #e6eef8}
+
+    .btn{padding:10px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:700}
+    .btn.primary{background:var(--accent);color:white}
+    .btn.ghost{background:#f4f7fb;color:var(--accent);border:1px solid #e6eef8}
+
+    .row{display:flex;gap:12px}
+    @media(max-width:760px){.row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="back" href="/messages">← Kembali</a>
+      <h2>Thread — <span class="small"><%= message.wa_id %></span></h2>
+    </div>
+
+    <div class="card">
+      <div class="thread">
+        <% for (const t of thread) { %>
+          <div>
+            <div class="meta"><strong><%= t.direction %></strong> • <%= t.created_at %></div>
+            <div class="bubble <%= t.direction === 'inbound' ? 'inbound' : 'outbound' %>"><%= t.text || '' %>
+              <div class="attachments">
+                <% const atts = attachmentsMap[t.id] || []; %>
+                <% for (const a of atts) { %>
+                  <% if ((a.mime || '').startsWith('image/')) { %>
+                    <a href="<%= a.url %>" target="_blank"><img src="<%= a.url %>" alt="image"></a>
+                  <% } else { %>
+                    <a href="<%= a.url %>" target="_blank"><%= a.mime %> - download</a>
+                  <% } %>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="reply">
+        <form id="replyForm" method="post" action="/messages/<%= message.id %>/reply">
+          <label for="reply-text" class="small">Balas Pesan</label>
+          <textarea id="reply-text" name="text" placeholder="Ketik balasan atau paste gambar/file ke sini"></textarea>
+          <div class="preview" id="paste-previews"></div>
+          <input type="hidden" name="filePath" id="filePath">
+          <input type="hidden" name="mime" id="fileMime">
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+            <button type="submit" class="btn primary">Kirim</button>
+            <a href="/messages" class="btn ghost">Batal</a>
+          </div>
+        </form>
+
+        <form id="attachmentForm" method="post" action="/messages/<%= message.id %>/reply-attachment">
+          <label class="small">Lampiran saja</label>
+          <input type="file" id="fileInput">
+          <input type="hidden" name="filePath" id="filePath2">
+          <input type="hidden" name="mime" id="fileMime2">
+          <div style="margin-top:10px">
+            <button type="submit" class="btn ghost">Kirim Lampiran</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Paste/upload handling (ke server /upload) — reuse behavior
+    const replyText = document.getElementById('reply-text');
+    const pastePreviews = document.getElementById('paste-previews');
+    document.getElementById('reply-text').addEventListener('paste', async (e) => {
+      const items = e.clipboardData.items;
+      for (const item of items) {
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          await uploadAndPrepare(file, 'reply');
+        }
+      }
+    });
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0]; if (file) await uploadAndPrepare(file, 'attachment');
+    });
+
+    async function uploadAndPrepare(file, formType){
+      const fd = new FormData(); fd.append('file', file);
+      const res = await fetch('/upload',{method:'POST',body:fd});
+      const data = await res.json(); if (data.error) return alert('Upload gagal');
+      if ((data.mime||'').startsWith('image/')){
+        const img = document.createElement('img'); img.src = data.url; pastePreviews.appendChild(img);
+      }
+      if (formType === 'reply'){
+        document.getElementById('filePath').value = data.path; document.getElementById('fileMime').value = data.mime;
+      } else {
+        document.getElementById('filePath2').value = data.path; document.getElementById('fileMime2').value = data.mime;
+      }
+    }
+  </script>
+</body>
+</html>

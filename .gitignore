@@ -1,0 +1,33 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# Logs
+logs/
+*.log
+*.out
+*.err
+
+# Database files
+database.sqlite
+database.sqlite-journal
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+
+# Coverage / test output
+coverage/
+*.lcov
+
+# Build artifacts
+dist/
+build/
