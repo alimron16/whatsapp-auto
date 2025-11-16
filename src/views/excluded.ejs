@@ -10,7 +10,7 @@
     body{font-family:Inter,system-ui,Arial;padding:20px;background:var(--bg);color:#0f172a}
     .wrap{max-width:980px;margin:0 auto}
     .top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-    .back{text-decoration:none;background:var(--card);border:1px solid #e6eef8;padding:8px 10px;border-radius:8px;color:var(--accent)}
+    .back{text-decoration:none;background:var(--card)col;border:1px solid rgb(105, 105, 105);padding:8px 10px;border-radius:8px;color:var(--accent)}
     h2{margin:0;font-size:18px}
 
     .card{background:var(--card);padding:16px;border-radius:var(--radius);box-shadow:0 8px 24px rgba(15,20,30,0.04)}
@@ -43,7 +43,7 @@
 <body>
   <div class="wrap">
     <div class="top">
-      <a class="back" href="/messages">Kembali</a>
+      <a class="back" style="align-self:flex-end" href="/messages">Kembali</a>
       <h2>Kelola Pengecualian</h2>
     </div>
 
@@ -86,8 +86,8 @@
     <div class="card" style="margin-top:16px;background:#f9fbfc;border-left:3px solid var(--accent)">
       <h4 style="margin:0 0 8px 0">ℹ️ Informasi</h4>
       <p style="font-size:13px;margin:0;line-height:1.5;color:var(--muted)">
-        Nomor/grup yang ada di daftar pengecualian akan diabaikan — pesan mereka tidak akan diproses auto-reply Gemini dan tidak disimpan ke database.
-      </p>
+       <strong> Nomor/grup yang ada di daftar pengecualian akan diabaikan. pesan mereka tidak akan diproses auto-reply Gemini dan tidak disimpan ke database.
+      </strong></p>
     </div>
   </div>
 </body>

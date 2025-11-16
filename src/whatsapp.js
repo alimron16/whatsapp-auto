@@ -24,7 +24,7 @@ function loadExcludedNumbers() {
 const KEYWORD_FILTER = [
       "kode","tujuan","cek","tolong","up","update","bantu","sore","siang","pagi","tim",
       "gimana","gmn","lama","hc","marah","validasi","refund","batalkan","batal","diproses",
-      "proses","Menunggu Jawaban","trx","Mhn tunggu trx sblmnya selesai","bagaimana"
+      "proses","Menunggu Jawaban","trx","Mhn tunggu trx sblmnya selesai","bagaimana","min","Sukses","kenapa"
   // Kosongkan array ini jika ingin proses semua pesan tanpa filter
 ];
 

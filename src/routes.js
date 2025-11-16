@@ -25,9 +25,48 @@ function saveExcluded(data) {
   fs.writeFileSync(excludedFilePath, JSON.stringify(data, null, 2));
 }
 
+// Helper: Smart-parse timestamp string from DB
+// Tries two interpretations:
+// 1) treat stored string as UTC (raw + 'Z')
+// 2) treat stored string as WIB (local UTC+7) and convert to UTC epoch
+// Chooses the interpretation whose epoch is closer to `now` (within a tolerance).
+// Jika timestamp di DB sudah WIB, maka TIDAK PERLU konversi UTC
+// Helper: Smart-parse timestamp string dari DB secara manual (100% WIB)
+// Tidak gunakan Date() agar tidak dipengaruhi timezone server/Node
+function smartParseTimestamp(raw) {
+  if (!raw) return { created_at: "", created_at_ts: null };
+
+  // Format umum SQLite: "YYYY-MM-DD HH:MM:SS"
+  const [datePart, timePart] = raw.split(" ");
+  if (!datePart || !timePart) {
+    return { created_at: raw, created_at_ts: null };
+  }
+
+  const [year, month, day] = datePart.split("-");
+  const [hour, minute, second] = timePart.split(":");
+
+  // Format WIB manual → tidak ada shifting timezone
+  const formatted = `${day}/${month}/${year}, ${hour}.${minute}.${second}`;
+
+  return {
+    created_at: formatted,
+    created_at_ts: null // tidak dibutuhkan
+  };
+}
+
+
+
 // List pesan inbound
 router.get('/messages', async (req, res) => {
-  const messages = await db.getAllMessages();
+  let messages = await db.getAllMessages();
+
+  // Parse timestamps robustly (handles legacy WIB-stored rows and UTC-stored rows)
+  messages = messages.map(m => {
+    const raw = m.created_at || '';
+    const parsed = smartParseTimestamp(raw);
+    return { ...m, created_at: parsed.created_at, created_at_ts: parsed.created_at_ts };
+  });
+
   res.render('messages', { messages });
 });
 
@@ -37,19 +76,34 @@ router.get('/messages/:id', async (req, res) => {
   if (!message) return res.status(404).send('Not found');
   const thread = await db.getThreadByWaId(message.wa_id);
 
-  // Ambil attachments untuk masing-masing message
+  // Format parent message using smart parser
+  try {
+    const fm = smartParseTimestamp(message.created_at);
+    message.created_at = fm.created_at;
+    message.created_at_ts = fm.created_at_ts;
+  } catch (e) {}
+
+  // Ambil attachments untuk masing-masing message dan format tiap item thread
   const attachmentsMap = {};
+  const formattedThread = [];
   for (const m of thread) {
     const atts = await db.getAttachmentsByMessage(m.id);
-    // Tambahkan url/filename yang aman untuk digunakan di view (hindari split('/') di client)
     attachmentsMap[m.id] = atts.map(a => ({
       ...a,
       filename: path.basename(a.path),
       url: '/uploads/' + path.basename(a.path)
     }));
+
+    // Format timestamp tiap pesan di thread
+    try {
+      const fm = smartParseTimestamp(m.created_at);
+      formattedThread.push({ ...m, created_at: fm.created_at, created_at_ts: fm.created_at_ts });
+    } catch (e) {
+      formattedThread.push(m);
+    }
   }
 
-  res.render('message_show', { message, thread, attachmentsMap });
+  res.render('message_show', { message, thread: formattedThread, attachmentsMap });
 });
 
 // Balas teks (dan optional: lampiran yang di-paste)

@@ -10,12 +10,11 @@ function init() {
       CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         wa_id TEXT,
-        direction TEXT, -- inbound/outbound
+        direction TEXT, 
         text TEXT,
-        status TEXT DEFAULT 'pending', -- pending/selesai
+        status TEXT DEFAULT 'pending',
         auto_replied INTEGER DEFAULT 0,
-        -- simpan langsung waktu WIB (UTC+7)
-        created_at DATETIME DEFAULT (datetime('now','localtime','+7 hours'))
+        created_at TEXT   -- Waktu server, bukan UTC
       )
     `);
 
@@ -23,12 +22,11 @@ function init() {
       CREATE TABLE IF NOT EXISTS attachments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         message_id INTEGER,
-        type TEXT, -- image/file/audio/video
+        type TEXT,
         path TEXT,
         mime TEXT,
         size INTEGER,
-        -- simpan langsung waktu WIB (UTC+7)
-        created_at DATETIME DEFAULT (datetime('now','localtime','+7 hours')),
+        created_at TEXT,  -- waktu server, bukan UTC
         FOREIGN KEY(message_id) REFERENCES messages(id) ON DELETE CASCADE
       )
     `);
@@ -36,11 +34,31 @@ function init() {
 }
 
 
+// Helper: waktu server (tanpa shift timezone)
+function nowLocal() {
+  const d = new Date();
+  const pad = n => n.toString().padStart(2, '0');
+
+  const year   = d.getFullYear();
+  const month  = pad(d.getMonth() + 1);
+  const day    = pad(d.getDate());
+  const hour   = pad(d.getHours());      // <-- JAM SERVER MURNI
+  const minute = pad(d.getMinutes());
+  const second = pad(d.getSeconds());
+
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
+
+
 function insertMessage({ wa_id, direction, text, status = 'pending', auto_replied = 0 }) {
   return new Promise((resolve, reject) => {
+    const ts = nowLocal();
+
     db.run(
-      `INSERT INTO messages (wa_id, direction, text, status, auto_replied) VALUES (?, ?, ?, ?, ?)`,
-      [wa_id, direction, text || null, status, auto_replied],
+      `INSERT INTO messages (wa_id, direction, text, status, auto_replied, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [wa_id, direction, text || null, status, auto_replied, ts],
       function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
@@ -48,6 +66,7 @@ function insertMessage({ wa_id, direction, text, status = 'pending', auto_replie
     );
   });
 }
+
 
 function updateStatus(id, status) {
   return new Promise((resolve, reject) => {
@@ -58,10 +77,12 @@ function updateStatus(id, status) {
   });
 }
 
+
 function getAllMessages() {
   return new Promise((resolve, reject) => {
     db.all(
-      `SELECT * FROM messages WHERE direction = 'inbound' ORDER BY created_at DESC, id DESC`,
+      `SELECT * FROM messages WHERE direction = 'inbound' 
+       ORDER BY created_at DESC, id DESC`,
       [],
       (err, rows) => {
         if (err) return reject(err);
@@ -70,6 +91,7 @@ function getAllMessages() {
     );
   });
 }
+
 
 function getMessage(id) {
   return new Promise((resolve, reject) => {
@@ -80,14 +102,21 @@ function getMessage(id) {
   });
 }
 
+
 function getThreadByWaId(wa_id) {
   return new Promise((resolve, reject) => {
-    db.all(`SELECT * FROM messages WHERE wa_id = ? ORDER BY created_at ASC, id ASC`, [wa_id], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows);
-    });
+    db.all(
+      `SELECT * FROM messages WHERE wa_id = ?
+       ORDER BY created_at ASC, id ASC`,
+      [wa_id],
+      (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      }
+    );
   });
 }
+
 
 function deleteMessage(id) {
   return new Promise((resolve, reject) => {
@@ -98,11 +127,15 @@ function deleteMessage(id) {
   });
 }
 
+
 function insertAttachment({ message_id, type, path, mime, size }) {
   return new Promise((resolve, reject) => {
+    const ts = nowLocal();
+
     db.run(
-      `INSERT INTO attachments (message_id, type, path, mime, size) VALUES (?, ?, ?, ?, ?)`,
-      [message_id, type, path, mime, size || null],
+      `INSERT INTO attachments (message_id, type, path, mime, size, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [message_id, type, path, mime, size || null, ts],
       function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
@@ -111,14 +144,21 @@ function insertAttachment({ message_id, type, path, mime, size }) {
   });
 }
 
+
 function getAttachmentsByMessage(message_id) {
   return new Promise((resolve, reject) => {
-    db.all(`SELECT * FROM attachments WHERE message_id = ? ORDER BY created_at ASC`, [message_id], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows);
-    });
+    db.all(
+      `SELECT * FROM attachments WHERE message_id = ?
+       ORDER BY created_at ASC`,
+      [message_id],
+      (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      }
+    );
   });
 }
+
 
 module.exports = {
   init,
