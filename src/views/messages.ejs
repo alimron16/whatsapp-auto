@@ -64,7 +64,10 @@
         <h1> Pesan Masuk</h1>
         <div class="meta">Dashboard <strong>Komplain</strong></div>
       </div>
-      <div class="meta">Total: <strong><%= messages.length %></strong></div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <a href="/excluded" style="color:var(--accent);text-decoration:none;font-weight:600;font-size:13px"><strong>Kelola Pengecualian</strong></a>
+        <div class="meta">Total: <strong><%= messages.length %></strong></div>
+      </div>
     </header>
 
     <div class="controls">

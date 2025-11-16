@@ -5,18 +5,29 @@ const router = express.Router();
 const db = require('./db');
 const { sendText, sendMedia } = require('./whatsapp');
 
+// Path untuk file excluded numbers
+const excludedFilePath = path.join(__dirname, 'excluded.json');
+
+// Helper: Load excluded numbers dari file
+function loadExcluded() {
+  try {
+    if (fs.existsSync(excludedFilePath)) {
+      return JSON.parse(fs.readFileSync(excludedFilePath, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Error loading excluded.json:', e);
+  }
+  return [];
+}
+
+// Helper: Save excluded numbers ke file
+function saveExcluded(data) {
+  fs.writeFileSync(excludedFilePath, JSON.stringify(data, null, 2));
+}
+
 // List pesan inbound
 router.get('/messages', async (req, res) => {
-  let messages = await db.getAllMessages();
-
-  // Format waktu ke WIB (Asia/Jakarta) dan sertakan timestamp untuk sorting di client
-  messages = messages.map(m => {
-    // SQLite CURRENT_TIMESTAMP is in UTC like 'YYYY-MM-DD HH:MM:SS'
-    const d = new Date((m.created_at || '') + 'Z');
-    const tzStr = d.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    return { ...m, created_at: tzStr, created_at_ts: d.getTime() };
-  });
-
+  const messages = await db.getAllMessages();
   res.render('messages', { messages });
 });
 
@@ -150,5 +161,41 @@ function guessMime(filePath) {
   if (ext === '.pdf') return 'application/pdf';
   return 'application/octet-stream';
 }
+
+// ===== ROUTES untuk kelola pengecualian =====
+router.get('/excluded', (req, res) => {
+  const excludedNumbers = loadExcluded();
+  res.render('excluded', { excludedNumbers });
+});
+
+router.post('/excluded/add', (req, res) => {
+  const { number } = req.body;
+  if (!number || !number.trim()) {
+    return res.status(400).send('Nomor/Grup tidak boleh kosong');
+  }
+  
+  const cleanNum = number.trim();
+  let excluded = loadExcluded();
+  
+  if (!excluded.includes(cleanNum)) {
+    excluded.push(cleanNum);
+    saveExcluded(excluded);
+    console.log('Tambah excluded:', cleanNum);
+  }
+  
+  res.redirect('/excluded');
+});
+
+router.post('/excluded/delete', (req, res) => {
+  const { number } = req.body;
+  if (!number) return res.status(400).send('Nomor/Grup tidak ditemukan');
+  
+  let excluded = loadExcluded();
+  excluded = excluded.filter(n => n !== number);
+  saveExcluded(excluded);
+  console.log('Hapus excluded:', number);
+  
+  res.redirect('/excluded');
+});
 
 module.exports = router;

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kelola Pengecualian — Dashboard</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--accent:#0f4c81;--muted:#556277;--radius:10px}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Arial;padding:20px;background:var(--bg);color:#0f172a}
+    .wrap{max-width:980px;margin:0 auto}
+    .top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .back{text-decoration:none;background:var(--card);border:1px solid #e6eef8;padding:8px 10px;border-radius:8px;color:var(--accent)}
+    h2{margin:0;font-size:18px}
+
+    .card{background:var(--card);padding:16px;border-radius:var(--radius);box-shadow:0 8px 24px rgba(15,20,30,0.04)}
+
+    .form-group{margin-bottom:14px}
+    label{display:block;font-weight:700;font-size:13px;margin-bottom:6px;color:#0f172a}
+    input{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef8;font-size:14px}
+    .hint{font-size:12px;color:var(--muted);margin-top:4px}
+
+    .btn{padding:10px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:700;font-size:14px}
+    .btn.primary{background:var(--accent);color:white}
+    .btn.danger{background:#dc2626;color:white}
+
+    .list{margin-top:16px}
+    .item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#f9fbfc;border-radius:8px;margin-bottom:8px;border-left:3px solid var(--accent)}
+    .item-text{flex:1}
+    .item-text strong{display:block;color:#0f172a}
+    .item-text small{color:var(--muted)}
+    .item-delete{display:inline-block}
+
+    .empty{text-align:center;color:var(--muted);padding:28px}
+    .stat{display:inline-block;background:var(--accent);color:white;padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px}
+
+    @media(max-width:760px){
+      .item{flex-direction:column;align-items:flex-start}
+      .item-delete{margin-top:10px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="back" href="/messages">Kembali</a>
+      <h2>Kelola Pengecualian</h2>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 14px 0">Tambah Nomor/Grup Baru</h3>
+      <form method="post" action="/excluded/add" style="display:flex;gap:10px">
+        <div style="flex:1">
+          <input type="text" name="number" placeholder="628xxxxxxxxx@c.us atau 120363...@g.us" required>
+          <div class="hint">Format: <code>628123456789@c.us</code> (nomor) atau <code>120363...@g.us</code> (grup)</div>
+        </div>
+        <button type="submit" class="btn primary" style="align-self:flex-end">Tambah</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin:0 0 14px 0">Daftar Pengecualian <span class="stat"><%= excludedNumbers.length %></span></h3>
+      
+      <% if (excludedNumbers.length === 0) { %>
+        <div class="empty">
+          <p>Tidak ada pengecualian. Semua pesan akan diproses.</p>
+        </div>
+      <% } else { %>
+        <div class="list">
+          <% for (const num of excludedNumbers) { %>
+            <div class="item">
+              <div class="item-text">
+                <strong><%= num %></strong>
+                <small><%= num.includes('@g.us') ? 'Grup' : 'Nomor Pribadi' %></small>
+              </div>
+              <form class="item-delete" method="post" action="/excluded/delete" onsubmit="return confirm('Hapus pengecualian ini?')">
+                <input type="hidden" name="number" value="<%= num %>">
+                <button type="submit" class="btn danger">Hapus</button>
+              </form>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card" style="margin-top:16px;background:#f9fbfc;border-left:3px solid var(--accent)">
+      <h4 style="margin:0 0 8px 0">ℹ️ Informasi</h4>
+      <p style="font-size:13px;margin:0;line-height:1.5;color:var(--muted)">
+        Nomor/grup yang ada di daftar pengecualian akan diabaikan — pesan mereka tidak akan diproses auto-reply Gemini dan tidak disimpan ke database.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,17 +4,19 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const db = require('./db');
 const gemini = require('./gemini');
 const qrcode = require('qrcode-terminal');
-// Tambahkan nomor pribadi atau ID grup yang ingin diabaikan di sini
-const EXCLUDED_NUMBERS = [
-  // Format nomor: '6281234567890@c.us' (nomor pribadi)
-  // Format grup: '120363045678901234@g.us' (ID grup)
-  '628812533840@c.us',
-  '628568191917@c.us'	,
-  '120363044406605446@g.us',
-  'status@broadcast',	
-  '120363402378311192@g.us',
-  '120363240444807328@g.us',
-];
+
+// Helper: Load excluded numbers dari file excluded.json (bisa diubah via UI)
+function loadExcludedNumbers() {
+  try {
+    const filePath = path.join(__dirname, 'excluded.json');
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Error loading excluded.json:', e);
+  }
+  return [];
+}
 
 // keyword filter
 // Jika keyword kosong/undefined, semua pesan akan di-process
@@ -61,9 +63,10 @@ client.on('message', async (msg) => {
     }
 
   
-    // Skip jika nomor/grup ada di daftar EXCLUDED_NUMBERS
+    // Skip jika nomor/grup ada di daftar excluded (load dinamis dari file)
+    const EXCLUDED_NUMBERS = loadExcludedNumbers();
     if (EXCLUDED_NUMBERS.includes(wa_id)) {
-      console.log('Pesan dari', wa_id, 'dikecualikan (terdaftar di EXCLUDED_NUMBERS)');
+      console.log('Pesan dari', wa_id, 'dikecualikan (terdaftar di excluded.json)');
       return;
     }
 
