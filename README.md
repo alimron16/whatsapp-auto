@@ -31,3 +31,16 @@ Proyek ini adalah sistem **Customer Service otomatis berbasis WhatsApp** yang di
    ```bash
    git clone https://github.com/username/whatsapp-auto.git
    cd whatsapp-auto
+
+2. Install Dependencies
+   ```bash
+   npm install
+
+3. GEMINI API
+   Isi Gemini API di dalam file .env
+
+4. RUN
+   ```bash
+   node src/index.js
+
+   
